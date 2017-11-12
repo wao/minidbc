@@ -45,9 +45,7 @@ module Minidbc
 
   module ClassMethods
     def method_added(method_name)
-      if :initialize  == method_name
-        return
-      elsif /\w+_without_dbc/ =~ method_name.to_s
+      if /\w+_without_dbc/ =~ method_name.to_s
         return
       elsif  /(pre_|post_|check_minidbc_invariant)\w+/ =~ method_name.to_s
         return
@@ -56,6 +54,10 @@ module Minidbc
         new_method_name = :"#{method_name}_without_dbc"
 
         if instance_methods(false).include?(new_method_name)
+          return
+        end
+
+        if method_name == :initialize && @hook_initialize
           return
         end
 
@@ -70,6 +72,7 @@ module Minidbc
         alias_method new_method_name, method_name
 
         if method_name == :initialize
+          @hook_initialize = true
           define_method method_name do |*arg|
             minidbc_initialize_call_wrap( new_method_name, pre_list, post_list, invariants, *arg)
           end
@@ -89,6 +92,7 @@ module Minidbc
       @pres = []
       @posts = []
       @invariants = []
+      @hook_initialize = false
 
       #TODO need to check invariants on initialize
       # class << self

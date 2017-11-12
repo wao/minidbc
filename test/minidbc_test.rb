@@ -209,6 +209,22 @@ class MinidbcTest < Minitest::Test
 
       assert_equal 13, TII.new.cp
     end
+
+    should "check after initialize" do
+      class TF
+        include Minidbc
+
+        invariant{ @a == 100 }
+
+        def initialize
+          @a = 1
+        end
+      end
+
+      assert_raises(Minidbc::DesignContractViolationException) do
+        TF.new
+      end
+    end
   end
 
 end
