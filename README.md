@@ -1,8 +1,7 @@
 # Minidbc
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/minidbc`. To experiment with that code, run `bin/console` for an interactive prompt.
+Minimalist version of Dbc for ruby. Only implement pre, post and invariant. Not consider a lot of case involve meta programming. Use it carefully and take your own risk.
 
-TODO: Delete this and the text above, and describe your gem
 
 ## Installation
 
