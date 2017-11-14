@@ -35,24 +35,49 @@ module Minidbc
   end
 
   def minidbc_pre(method_name)
-    self.class.preconds[method_name] || []
+    self.class.preconds(method_name) || []
   end
 
   def minidbc_post(method_name)
-    self.class.postconds[method_name] || []
+    self.class.postconds(method_name) || []
   end
 
   def minidbc_invariants
+    # byebug
     self.class.invariants
   end
 
-  module ClassMethods
-    def preconds
-      @minidbc_pres
+  module SubclassMethods
+    def preconds(method_name)
+      preconds = @minidbc_pres[method_name]
+      super_preconds = superclass.preconds(method_name)
+      if preconds
+        if !super_preconds.empty?
+          puts "Warnning: You have override precondition for #{method_name}. You can only lose them"
+        else
+          preconds
+        end
+      else
+        super_preconds
+      end
     end
 
-    def postconds
-      @minidbc_posts
+    def postconds(method_name)
+      ( @minidbc_posts[method_name] || [] ).concat( superclass.postconds(method_name) )
+    end
+
+    def invariants
+      @invariants.concat( superclass.invariants )
+    end
+  end
+
+  module ClassMethods
+    def preconds(method_name)
+      @minidbc_pres[method_name] 
+    end
+
+    def postconds(method_name)
+      @minidbc_posts[method_name]
     end
 
     def invariants
@@ -60,13 +85,15 @@ module Minidbc
     end
 
     def method_added(method_name)
+      # byebug if method_name == :initialize
+
       if /\w+_without_dbc/ =~ method_name.to_s
         return
       elsif  /(pre_|post_|check_minidbc_invariant)\w+/ =~ method_name.to_s
         return
       else
 
-        new_method_name = :"#{method_name}_without_dbc"
+        new_method_name = :"#{method_name}_#{self.to_s.gsub(/::/,"_")}_without_dbc"
 
         if instance_methods(false).include?(new_method_name)
           return
@@ -99,6 +126,10 @@ module Minidbc
 
     def create_method_call_wrap( method_name, new_method_name, check_pre, check_post, pre_check_invariants, post_check_invariants )
       define_method method_name do |*arg|
+        # puts self.class
+        # puts method_name
+        # puts new_method_name
+        # byebug
         minidbc_call_wrap( method_name, new_method_name, check_pre, check_post, pre_check_invariants, post_check_invariants, *arg )
       end
     end
@@ -124,6 +155,10 @@ module Minidbc
 
     def inherited(subclass)
       subclass.minidbc_init
+      if subclass.superclass == self
+        puts subclass
+        subclass.extend(SubclassMethods)
+      end
     end
 
     def invariant(&blk)
