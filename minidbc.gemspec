@@ -10,8 +10,8 @@ Gem::Specification.new do |spec|
   spec.email         = ["yangchen@thinkmore.info"]
 
   spec.summary       = %q{A minimal implementation of dbc for ruby}
-  spec.description   = %q{Write a longer description or delete this line.}
-  spec.homepage      = "http://example.com"
+  spec.description   = %q{This is a simple dbc library for ruby. It emploies alias_method to redefine method, hence it will introduce a lot of method name in your class. And it should be slow. If you care this, don't use it}
+  spec.homepage      = "https://github.com/wao/minidbc"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
   # to allow pushing to a single host or delete this section to allow pushing to any host.
