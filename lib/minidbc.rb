@@ -73,18 +73,30 @@ module Minidbc
 
         if method_name == :initialize
           @hook_initialize = true
-          define_method method_name do |*arg|
-            minidbc_initialize_call_wrap( new_method_name, pre_list, post_list, invariants, *arg)
-          end
+          create_initialize_call_wrap(method_name, new_method_name, pre_list, post_list, invariants)
         elsif private_methods.include? method_name
-          define_method method_name do |*arg|
-            minidbc_private_call_wrap( new_method_name, pre_list, post_list, *arg)
-          end
+          create_private_method_call_wrap( method_name, new_method_name, pre_list, post_list )
         else
-          define_method method_name do |*arg|
-            minidbc_call_wrap( new_method_name, pre_list, post_list, invariants, *arg)
-          end
+          create_method_call_wrap( method_name, new_method_name, pre_list, post_list, invariants )
         end
+      end
+    end
+
+    def create_initialize_call_wrap(method_name, new_method_name, pre_list, post_list, invariants)
+      define_method method_name do |*arg|
+        minidbc_initialize_call_wrap( new_method_name, pre_list, post_list, invariants, *arg)
+      end
+    end
+
+    def create_private_method_call_wrap( method_name, new_method_name, pre_list, post_list )
+      define_method method_name do |*arg|
+        minidbc_private_call_wrap( new_method_name, pre_list, post_list, *arg)
+      end
+    end
+
+    def create_method_call_wrap( method_name, new_method_name, pre_list, post_list, invariants )
+      define_method method_name do |*arg|
+        minidbc_call_wrap( new_method_name, pre_list, post_list, invariants, *arg)
       end
     end
 
@@ -96,11 +108,11 @@ module Minidbc
 
       #TODO need to check invariants on initialize
       # class << self
-        # alias_method :minidbc_new, :new
-        # def new(*arg)
-          # ret = __new__(*arg)
-          # ret.minidbc_check_condition(
-        # end
+      # alias_method :minidbc_new, :new
+      # def new(*arg)
+      # ret = __new__(*arg)
+      # ret.minidbc_check_condition(
+      # end
       # end
     end
 
