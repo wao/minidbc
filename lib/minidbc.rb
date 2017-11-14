@@ -22,28 +22,43 @@ module Minidbc
     end
   end
 
-  def minidbc_private_call_wrap( new_method_name, pre_list, post_list, *arg)
-    minidbc_check_condition(pre_list, *arg)
-    ret = send( new_method_name, *arg )
-    minidbc_check_condition(post_list, ret, *arg)
-    ret
-  end
-
-  def minidbc_initialize_call_wrap( new_method_name, pre_list, post_list, invariants, *arg)
-    ret = minidbc_private_call_wrap( new_method_name, pre_list, post_list, *arg)
-    minidbc_check_condition(invariants)
-    ret
-  end
-
-  def minidbc_call_wrap( new_method_name, pre_list, post_list, invariants, *args)
-    minidbc_check_condition(invariants)
-    #TODO need to handle exception
-    minidbc_initialize_call_wrap( new_method_name, pre_list, post_list, invariants, *args )
-  end
-
   Cond = Struct.new( :blk, :location )
 
+  def minidbc_call_wrap( method_name, new_method_name, check_pre, check_post, pre_check_invariants, post_check_invariants, *arg )
+    minidbc_check_condition(minidbc_pre(method_name), *arg) if check_pre
+    minidbc_check_condition(minidbc_invariants) if pre_check_invariants
+    #TODO need to handle exception
+    ret = send( new_method_name, *arg )
+    minidbc_check_condition(minidbc_invariants) if post_check_invariants
+    minidbc_check_condition(minidbc_post(method_name), ret, *arg) if check_post
+    ret
+  end
+
+  def minidbc_pre(method_name)
+    self.class.preconds[method_name] || []
+  end
+
+  def minidbc_post(method_name)
+    self.class.postconds[method_name] || []
+  end
+
+  def minidbc_invariants
+    self.class.invariants
+  end
+
   module ClassMethods
+    def preconds
+      @minidbc_pres
+    end
+
+    def postconds
+      @minidbc_posts
+    end
+
+    def invariants
+      @invariants
+    end
+
     def method_added(method_name)
       if /\w+_without_dbc/ =~ method_name.to_s
         return
@@ -62,47 +77,37 @@ module Minidbc
         end
 
 
-        pre_list = @pres
-        post_list = @posts
+        @minidbc_pres[method_name] = @pres
+        @minidbc_posts[method_name] = @posts
+
         @pres = []
         @posts = []
-        invariants = @invariants
 
         #TODO need to support client code call alias_method
         alias_method new_method_name, method_name
 
         if method_name == :initialize
           @hook_initialize = true
-          create_initialize_call_wrap(method_name, new_method_name, pre_list, post_list, invariants)
+          create_method_call_wrap( method_name, new_method_name, true, true, false, true )
         elsif private_methods.include? method_name
-          create_private_method_call_wrap( method_name, new_method_name, pre_list, post_list )
+          create_method_call_wrap( method_name, new_method_name, true, true, false, false )
         else
-          create_method_call_wrap( method_name, new_method_name, pre_list, post_list, invariants )
+          create_method_call_wrap( method_name, new_method_name, true, true, true, true )
         end
       end
     end
 
-    def create_initialize_call_wrap(method_name, new_method_name, pre_list, post_list, invariants)
+    def create_method_call_wrap( method_name, new_method_name, check_pre, check_post, pre_check_invariants, post_check_invariants )
       define_method method_name do |*arg|
-        minidbc_initialize_call_wrap( new_method_name, pre_list, post_list, invariants, *arg)
-      end
-    end
-
-    def create_private_method_call_wrap( method_name, new_method_name, pre_list, post_list )
-      define_method method_name do |*arg|
-        minidbc_private_call_wrap( new_method_name, pre_list, post_list, *arg)
-      end
-    end
-
-    def create_method_call_wrap( method_name, new_method_name, pre_list, post_list, invariants )
-      define_method method_name do |*arg|
-        minidbc_call_wrap( new_method_name, pre_list, post_list, invariants, *arg)
+        minidbc_call_wrap( method_name, new_method_name, check_pre, check_post, pre_check_invariants, post_check_invariants, *arg )
       end
     end
 
     def minidbc_init
       @pres = []
       @posts = []
+      @minidbc_pres = {}
+      @minidbc_posts = {}
       @invariants = []
       @hook_initialize = false
 
