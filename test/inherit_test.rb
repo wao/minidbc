@@ -58,4 +58,27 @@ class InheritTest < Minitest::Test
       assert_equal 500, Sub3.new(100).a(5)
     end
   end
+
+  context "subclass of subclass" do
+    setup do
+      class FirstLevelSub < BaseClass
+        invariant { true }
+
+        def initialize(b)
+        end
+      end
+    end
+    should "check parent invariant for initialize" do
+      class SecondLevelSub < FirstLevelSub
+        def initialize(b)
+          super(100)
+          @ac = b
+        end
+      end
+
+      assert_raises( Minidbc::DesignContractViolationException ){
+        SecondLevelSub.new(300)
+      }
+    end
+  end
 end
